@@ -1,0 +1,22 @@
+{
+  "name": "hello-tensorflow",
+  "version": "1.0.0",
+  "description": "Guess a string is an English-like word or not. With tensorflow.js right in the browser.",
+  "main": "index.js",
+  "keywords": [
+    "tensorflow"
+  ],
+  "author": "zhangbenber",
+  "license": "MIT",
+  "dependencies": {
+    "@tensorflow/tfjs": "^1.1.2"
+  },
+  "devDependencies": {
+    "@tensorflow/tfjs-node": "^1.1.2",
+    "ts-node": "^8.2.0",
+    "typescript": "^3.5.1"
+  },
+  "scripts": {
+    "train": "ts-node trainer.ts"
+  }
+}
