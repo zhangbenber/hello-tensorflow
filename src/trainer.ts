@@ -1,42 +1,11 @@
 import * as tf from '@tensorflow/tfjs-node';
 import * as fs from 'fs';
 import * as path from 'path';
+import { maxWordLength, getWordsData, testWords } from './common';
 
 const modelName = 'model';
 const modelURI = `file://${path.resolve(__dirname, modelName)}`;
-const maxWordLength = 30;
-const wordVectorSize = maxWordLength * 26;
-const testWords = [
-  'test', 'words', 'sglhsdzf', 'nqoewrv', 'zhangshuaige',
-  'hSkqOaTZ', 'randomWords', 'pageSize', 'nfobl', 'asdfghjkl',
-  'nihongo', 'karteversity', 'rhpoqe', 'jrtg', 'rthio',
-  'pinyin', 'neiwai', 'python', 'javascript', 'tapqst',
-  'teqats', 'waqsty', 'sfaty', 'param', 'tokyo',
-  'tsunami', 'kyoto', 'faq', 'mas', 'mass',
-  'applyform', 'eriguerwqhtu', 'dtehzwg', 'a', 'of',
-  'form', 'qe', 'tesraper', 'qualitivation', 'staihe',
-  'por', 'tesave', 'waap', 'tempt', '',
-  'var', 'qutaumn', 'departare', 'tion', 'in',
-  'let', 'pass', 'do', 'off', 'the',
-  'flkja', 'grhu', 'sfbljk', 'vf', 'wenuota',
-  'basic', 'saflingde', 'parase', 'herrow', 'dest',
-  'hwqruoq', 'fdshglk', 'sfblka', 'dfbh', 'dsbflisghdfliughlfd',
-  'aaaaa', 'bbbbb', 'eeeee', 'xxxxx', 'qqqqq',
-  'kkbjdsav', 'dfsblfg', 'sfgfdsguifsd', 'aelkrastmastquam', 'aelkrast',
-  'spass', 'ditable', 'swata', 'doaevents', 'stashment',
-  'skamstablet', 'stmawavtkqm', 'patenametasd', 'paremstbayke', 'staempatsxadeque',
-  'tasorments', 'statefulless', 'reimbrusment', 'tamporstham', 'questionare',
-  'stlndlvnans', 'vablared', 'staramus', 'tambo', 'ham',
-  'sfhdgjlkdngtrkl', 'fdlhjgkfasjkgld', 'fglhjksdfg', 'ieorytwdsa', 'adjn',
-  'dfsja', 'kafas', 'parsta', 'qua', 'l',
-  'thisisatest', 'iamhere', 'ilovetensorflow', 'thisisasimplesentence', 'thawakqmatquede',
-  'watashihanekodesu', 'youcangetthemtogether', 'manymanywordsarejoined', 'fastclick', 'thisisaqadcgpkword',
-  'zheshiyijupinyin', 'alibaba', 'alibabainc', 'alibabacorp', 'watashihachugokujindesu',
-  'keras', 'samsung', 'google', 'baidu', 'tencent',
-  'qa', 'cctv', 'bpms', 'pd', 'pm',
-  'chrome', 'vscode', 'visualstudiocode', 'inc', 'ta',
-  'st', 'tm', 'wq', 'as', 'zx',
-];
+
 const threshold = .5;
 console.log(modelURI);
 
@@ -55,18 +24,6 @@ function createModel() {
   model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
   model.summary();
   return model;
-}
-
-export function getWordsData(words: string[]) {
-  const wordsVectors = new Float32Array(wordVectorSize * words.length).fill(0);
-  words.forEach((w, i) => {
-    wordsVectors.fill(-.04, i * wordVectorSize, i * wordVectorSize + w.length * 26);
-    w.toLowerCase().substr(0, maxWordLength).split('').forEach((letter, j) => {
-      wordsVectors[i * wordVectorSize + j * 26 + letter.charCodeAt(0) - 97] = 1;
-    });
-  })
-  const data = tf.tensor3d(wordsVectors, [words.length, maxWordLength, 26]);
-  return data;
 }
 
 function trainModel(model: tf.Sequential, inputs: tf.Tensor, labels: tf.Tensor, validationInputs: tf.Tensor, validationLabels: tf.Tensor) {
@@ -96,8 +53,8 @@ function getModel() {
     const noise = words.map(t => new Array(~~(Math.pow(t.length / 30, 1) * 30)).fill(undefined).map(_ =>
       String.fromCharCode(~~(Math.random() * 26) + 97)).join('')
     );
-    const wordData = getWordsData(words);
-    const noiseData = getWordsData(noise);
+    const wordData = getWordsData(tf, words);
+    const noiseData = getWordsData(tf, noise);
     const trainDataLength = ~~(words.length * .8);
     const wordLabels = tf.ones([wordData.shape[0]])
     const noiseLabels = tf.zeros([noiseData.shape[0]]);
@@ -115,7 +72,7 @@ function getModel() {
 
 function testModel(model: tf.Sequential) {
   console.log(`threshold = ${threshold}`);
-  const result = (model.predict(getWordsData(testWords)) as tf.Tensor).as1D().arraySync();
+  const result = (model.predict(getWordsData(tf, testWords)) as tf.Tensor).as1D().arraySync();
   const resultString = testWords.map((w, i) => {
     const passed = result[i] > threshold;
     return `${passed ? '\x1b[0;32m' : '\x1b[0;31m'}${result[i].toFixed(3)} \x1b[1m${w.padEnd(22)}\x1b[0m`
@@ -131,7 +88,7 @@ function testModel(model: tf.Sequential) {
     const y = Math.pow((Math.pow(x, 4) + Math.pow(x, .5) * 9) / 30, 1.5) * 30 + 1;
     return new Array(~~y).fill(undefined).map(t => String.fromCharCode(~~(Math.random() * 26) + 97)).join('')
   });
-  const resultForRandomWords = (model.predict(getWordsData(randomWords)) as tf.Tensor).as1D().arraySync();
+  const resultForRandomWords = (model.predict(getWordsData(tf, randomWords)) as tf.Tensor).as1D().arraySync();
   const randomWordsPair = randomWords.map((w, i) => ({
     word: w,
     result: resultForRandomWords[i]
